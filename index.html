@@ -1,27 +1,226 @@
-<!DOCTYPE>
-<html langen">
+<!DOCTYPE html>
+<html lang="en">
 <head>
- <meta charsetUTF-8">
-  <meta nameviewport" content="width=device-width, initial-scale=1.0">
-  <title>V Extension</title  <script="STV.js" defer></script  <style>
- body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      margin-top: 50px;
-    }
-    button {
-      padding: 10px 20px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    #output {
-      margin-top: 20px;
-      font-size: 18px;
-      color: green;
-    }
-  </style</head>
->
-  <h1>STV</h1>
- <button="run-stv">Run STV</button  <div idoutput"></div>
->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STV Web Translator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        h1, h2 {
+            color: #333;
+        }
+        
+        .container {
+            background-color: #f9f9f9;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .settings-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        input[type="range"], 
+        input[type="number"] {
+            width: 100%;
+            margin-bottom: 10px;
+        }
+        
+        .value-display {
+            font-size: 0.9em;
+            color: #666;
+            text-align: right;
+        }
+        
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        
+        button:hover {
+            background-color: #45a049;
+        }
+        
+        .delete-button {
+            background-color: #f44336;
+        }
+        
+        .delete-button:hover {
+            background-color: #d32f2f;
+        }
+        
+        .shortcuts {
+            background-color: #fffde7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>STV Web Translator</h1>
+    
+    <div class="container">
+        <h2>Translation Settings</h2>
+        
+        <div class="settings-group">
+            <label for="maxResponseLength">Max Response Length</label>
+            <input type="range" id="maxResponseLength" min="100" max="2000" value="1000" step="50">
+            <div class="value-display"><span id="maxResponseLengthValue">1000</span> characters</div>
+        </div>
+        
+        <div class="settings-group">
+            <label for="temperature">Temperature</label>
+            <input type="range" id="temperature" min="0" max="1" value="0.7" step="0.1">
+            <div class="value-display"><span id="temperatureValue">0.7</span></div>
+        </div>
+        
+        <div class="settings-group">
+            <label for="frequencyPenalty">Frequency Penalty</label>
+            <input type="range" id="frequencyPenalty" min="0" max="2" value="0.5" step="0.1">
+            <div class="value-display"><span id="frequencyPenaltyValue">0.5</span></div>
+        </div>
+        
+        <div class="settings-group">
+            <label for="presencePenalty">Presence Penalty</label>
+            <input type="range" id="presencePenalty" min="0" max="2" value="0.5" step="0.1">
+            <div class="value-display"><span id="presencePenaltyValue">0.5</span></div>
+        </div>
+        
+        <div class="settings-group">
+            <label for="topK">Top K</label>
+            <input type="range" id="topK" min="1" max="100" value="40" step="1">
+            <div class="value-display"><span id="topKValue">40</span></div>
+        </div>
+        
+        <div class="settings-group">
+            <label for="topP">Top P</label>
+            <input type="range" id="topP" min="0" max="1" value="0.9" step="0.05">
+            <div class="value-display"><span id="topPValue">0.9</span></div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Target Elements</h2>
+        <div class="settings-group">
+            <label for="targetSelectors">CSS Selectors (comma separated)</label>
+            <input type="text" id="targetSelectors" value=".mes_text, .message-content, details summary, .preview-title, .preview-description, .caller-name, .call-status" style="width: 100%;">
+        </div>
+    </div>
+    
+    <div class="container">
+        <h2>Actions</h2>
+        <button id="saveSettings">Save Settings</button>
+        <button id="translateCurrent">Translate Current Message</button>
+        <button id="translateAll">Translate All Messages</button>
+        <button id="toggleAutoTranslate">Auto-Translate: OFF</button>
+        <button id="resetTranslation" class="delete-button">Reset Translation</button>
+    </div>
+    
+    <div class="shortcuts">
+        <h2>Keyboard Shortcuts</h2>
+        <ul>
+            <li><strong>Alt+T</strong> - Translate current or latest message</li>
+            <li><strong>Alt+R</strong> - Reset translation for current message</li>
+            <li><strong>Alt+A</strong> - Toggle auto-translation</li>
+        </ul>
+    </div>
+    
+    <script>
+        // Update displayed values when sliders change
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            const valueDisplay = document.getElementById(slider.id + 'Value');
+            slider.addEventListener('input', () => {
+                valueDisplay.textContent = slider.value;
+            });
+        });
+        
+        // Save settings to localStorage
+        document.getElementById('saveSettings').addEventListener('click', () => {
+            const settings = {
+                maxResponseLength: document.getElementById('maxResponseLength').value,
+                temperature: document.getElementById('temperature').value,
+                frequencyPenalty: document.getElementById('frequencyPenalty').value,
+                presencePenalty: document.getElementById('presencePenalty').value,
+                topK: document.getElementById('topK').value,
+                topP: document.getElementById('topP').value,
+                targetSelectors: document.getElementById('targetSelectors').value
+            };
+            
+            localStorage.setItem('stvTranslatorSettings', JSON.stringify(settings));
+            alert('Settings saved successfully!');
+        });
+        
+        // Load settings from localStorage
+        window.addEventListener('DOMContentLoaded', () => {
+            const savedSettings = localStorage.getItem('stvTranslatorSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                
+                for (const [key, value] of Object.entries(settings)) {
+                    const element = document.getElementById(key);
+                    if (element) {
+                        element.value = value;
+                        // Update displayed values
+                        const valueDisplay = document.getElementById(key + 'Value');
+                        if (valueDisplay) {
+                            valueDisplay.textContent = value;
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Toggle auto-translate
+        let autoTranslateEnabled = false;
+        document.getElementById('toggleAutoTranslate').addEventListener('click', function() {
+            autoTranslateEnabled = !autoTranslateEnabled;
+            this.textContent = `Auto-Translate: ${autoTranslateEnabled ? 'ON' : 'OFF'}`;
+            this.style.backgroundColor = autoTranslateEnabled ? '#2196F3' : '#4CAF50';
+            
+            // This would connect to your STV.js functionality
+            // toggleAutoTranslate(autoTranslateEnabled);
+        });
+        
+        // For demo purposes - in actual implementation these would connect to STV.js
+        document.getElementById('translateCurrent').addEventListener('click', () => {
+            console.log('Translating current message...');
+            // In real implementation: translateCurrentMessage();
+        });
+        
+        document.getElementById('translateAll').addEventListener('click', () => {
+            console.log('Translating all messages...');
+            // In real implementation: translateAllMessages();
+        });
+        
+        document.getElementById('resetTranslation').addEventListener('click', () => {
+            console.log('Resetting translations...');
+            // In real implementation: resetTranslations();
+        });
+    </script>
+    
+    <!-- This would load your STV.js script -->
+    <!-- <script src="STV.js"></script> -->
+</body>
 </html>
